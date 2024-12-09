@@ -1,12 +1,14 @@
 GXX = g++
-CFILES = main.cpp socket.cpp
-OUTNAME = main
+CFILES = funny_game_online.cpp
+OUTNAME = online
 
 all: build
 
+debug:
+	$(GXX) -g $(CFILES) -o $(OUTNAME)
+
 build:
-	$(GXX) $(CFILES) -o main
-	$(GXX) main2.cpp socket.cpp -o main2
+	$(GXX) $(CFILES) -o $(OUTNAME)
 
 clean:
-	rm -f main server
+	rm -f $(OUTNAME)
