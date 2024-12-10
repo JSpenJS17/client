@@ -1,5 +1,5 @@
 GXX = g++
-CFILES = client.cpp engine.cpp client_socket.cpp
+CFILES = src/client.cpp src/engine.cpp src/client_socket.cpp
 CARGS = -Wall -D LINUX
 OUTNAME = client
 
