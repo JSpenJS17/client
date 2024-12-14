@@ -25,7 +25,7 @@ void check_error()
 
 int main()
 {
-    #ifdef LINUX
+    #if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__))
     init_termios();
     #endif
 
@@ -45,6 +45,7 @@ int main()
 
     // sending data
     cout << "Connected!" << endl;
+
     while (true) {
         char key = wait_for_kb_input();
         
@@ -74,7 +75,7 @@ int main()
     cout << "Closing socket..." << endl;
     delete clientSocket;
 
-    #ifdef LINUX
+    #if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__))
     reset_termios();
     #endif
 
