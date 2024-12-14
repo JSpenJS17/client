@@ -1,9 +1,20 @@
 #ifndef CLIENT_SOCKET_HPP
 #define CLIENT_SOCKET_HPP
 
+// might wanna put these includes in the cpp files instead of in the hpp files
+#ifdef __linux__
+// linux specific includes
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#endif
+
+#ifdef _WIN32
+// windows specific includes
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#endif
+
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
@@ -19,6 +30,7 @@ public:
     void send_msg(const char* msg, int msg_size);
     void receive_msg(char* buffer, int buffer_size);
     void close_socket();
+
 private:
     int clientSocket;
     struct sockaddr_in serverAddress;
