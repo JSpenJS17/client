@@ -7,7 +7,7 @@ ClientSocket* clientSocket;
 void sigint_handler(int sig)
 {
     delete clientSocket;
-    #ifdef LINUX
+    #if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__))
     reset_termios();
     #endif
     exit(0);
@@ -48,9 +48,9 @@ int main()
 
     while (true) {
         char key = wait_for_kb_input();
-        
+        char key_send[2] = {key, '\0'};
         // send our key
-        clientSocket->send_msg(&key);
+        clientSocket->send_msg(key_send);
         check_error();
 
         // receive input back
@@ -69,6 +69,7 @@ int main()
             cout << "It's a tie!" << endl;
         }
 
+        fflush(stdin);
     }
 
     // closing socket
