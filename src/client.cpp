@@ -1,5 +1,7 @@
 #include "engine.hpp"
 #include "client_socket.hpp"
+#include <thread>
+#include <mutex>
 
 using namespace std;
 ClientSocket* clientSocket;
@@ -23,6 +25,19 @@ void check_error()
     }
 }
 
+void input_sender() {
+    while (true) {
+        // block until we get an input
+        char key = wait_for_kb_input();
+        // null terminate it so we know when it ends
+        char key_send[2] = {key, '\0'};
+
+        // send it!
+        clientSocket->send_msg(key_send);
+        check_error();
+    }
+}
+
 int main()
 {
     #if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__))
@@ -33,7 +48,7 @@ int main()
     cout << "Creating socket..." << endl;
     clientSocket = new ClientSocket();
     check_error();
-
+    
     // specifying address
     const char* server_ip = "131.186.7.78";
     int port = 5000;
@@ -46,33 +61,27 @@ int main()
     // sending data
     cout << "Connected!" << endl;
 
+    // create a thread that listens for input and sends it
+    thread sender(input_sender);
+
     while (true) {
-        char key = wait_for_kb_input();
-        char key_send[2] = {key, '\0'};
-        // send our key
-        clientSocket->send_msg(key_send);
+        // wait to receive input
+        char receive_buffer[1024];
+        clientSocket->receive_msg(receive_buffer, sizeof(receive_buffer));
         check_error();
 
-        // receive input back
-        char buffer[1024];
-        clientSocket->receive_msg(buffer, 1024);
-        check_error();
-
-        cout << "Server response: " << buffer << endl;
-        char rps = buffer[0];
-
-        if (rps == 'w') {
-            cout << "You win!" << endl;
-        } else if (rps == 'l') {
-            cout << "You lose!" << endl;
-        } else if (rps == 't') {
-            cout << "It's a tie!" << endl;
+        // if we got any
+        if (strlen(receive_buffer) > 0) 
+        {
+            cout << "Received: " <<  receive_buffer << endl;
         }
 
+        // flush stdin to avoid input queueing
         fflush(stdin);
     }
 
     // closing socket
+    sender.join();
     cout << "Closing socket..." << endl;
     delete clientSocket;
 
