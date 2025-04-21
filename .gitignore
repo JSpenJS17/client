@@ -2,3 +2,5 @@
 client
 client.exe
 .vscode
+*.d
+*.o
