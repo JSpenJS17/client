@@ -5,6 +5,8 @@
 
 using namespace std;
 ClientSocket* clientSocket;
+Board* board;
+Pixel bg_pixel(' ', BLACK, BLACK);
 
 void sigint_handler(int sig)
 {
@@ -25,16 +27,40 @@ void check_error()
     }
 }
 
-void input_sender() {
+void sender() {
     while (true) {
-        // block until we get an input
-        char key = wait_for_kb_input();
-        // null terminate it so we know when it ends
-        char key_send[2] = {key, '\0'};
+        // Block until we get an input
+        char key = get_kb_input();
 
-        // send it!
-        clientSocket->send_msg(key_send);
+        if (key != -1)
+        {
+            // Null-terminate it so we know when it ends
+            char key_send[2] = {key, '\0'};
+
+            // Send it!
+            clientSocket->send_msg(key_send);
+            check_error();
+        }
+
+        // look for input every 25 ms (can be changed)
+        delay(25);        
+    }
+}
+
+void listener() {
+    // this is where our game loop will be I think
+    while (true) {
+        // Wait to receive input
+        char receive_buffer[1024];
+        clientSocket->receive_msg(receive_buffer, sizeof(receive_buffer));
         check_error();
+
+        // If we got any
+        if (strlen(receive_buffer) > 0) {
+            cout << "Partner's Input: " << receive_buffer << endl;
+        }
+
+        fflush(stdin);
     }
 }
 
@@ -61,27 +87,24 @@ int main()
     // sending data
     cout << "Connected!" << endl;
 
-    // create a thread that listens for input and sends it
-    thread sender(input_sender);
+    
+    board = new Board(10, 10, bg_pixel);
 
-    while (true) {
-        // wait to receive input
-        char receive_buffer[1024];
-        clientSocket->receive_msg(receive_buffer, sizeof(receive_buffer));
+    try {
+        // Start sender and listener in separate threads
+        thread sender_thread(sender);
+        thread listener_thread(listener);
+
+        // Wait for both threads to finish (they won't, as these are infinite loops)
+        sender_thread.join();
+        listener_thread.join();
+    } catch (const exception& ex) {
+        cerr << "Thread error: " << ex.what() << endl;
         check_error();
-
-        // if we got any
-        if (strlen(receive_buffer) > 0) 
-        {
-            cout << "Received: " <<  receive_buffer << endl;
-        }
-
-        // flush stdin to avoid input queueing
-        fflush(stdin);
+        exit(1);
     }
 
     // closing socket
-    sender.join();
     cout << "Closing socket..." << endl;
     delete clientSocket;
 
