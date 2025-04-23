@@ -3,10 +3,13 @@
 #include <thread>
 #include <mutex>
 
+#define BUFFER_SIZE 1024
+
 using namespace std;
 ClientSocket* clientSocket;
 Board* board;
 Pixel bg_pixel(' ', BLACK, BLACK);
+string starting_string = "Hello from client";
 
 void sigint_handler(int sig)
 {
@@ -28,39 +31,44 @@ void check_error()
 }
 
 void sender() {
+    clientSocket->send_msg(starting_string);
     while (true) {
         // Block until we get an input
         char key = get_kb_input();
 
         if (key != -1)
         {
-            // Null-terminate it so we know when it ends
-            char key_send[2] = {key, '\0'};
-
             // Send it!
-            clientSocket->send_msg(key_send);
+            clientSocket->send_msg(&key, 1);
             check_error();
         }
 
         // look for input every 25 ms (can be changed)
-        delay(25);        
+        delay(16);
     }
 }
 
 void listener() {
-    // this is where our game loop will be I think
+    char receive_buffer[BUFFER_SIZE];
+    size_t bytes_received;
+    size_t wait_time = 0;
+    
     while (true) {
-        // Wait to receive input
-        char receive_buffer[1024];
-        clientSocket->receive_msg(receive_buffer, sizeof(receive_buffer));
+        bytes_received = clientSocket->receive_msg(receive_buffer, sizeof(receive_buffer));
         check_error();
 
-        // If we got any
-        if (strlen(receive_buffer) > 0) {
-            cout << "Partner's Input: " << receive_buffer << endl;
+        for (size_t i = 0; i < bytes_received; i++)
+        {
+            if (wait_time < starting_string.size())
+            {
+                wait_time++;
+                continue;
+            }
+            cout << "Received: " << receive_buffer[i] << endl;
         }
 
         fflush(stdin);
+        delay(16);
     }
 }
 

@@ -28,7 +28,7 @@ public:
     void connect_to(const char* server_ip, int port);
     void send_msg(std::string msg);
     void send_msg(const char* msg, int msg_size);
-    void receive_msg(char* buffer, int buffer_size);
+    size_t receive_msg(char* buffer, int buffer_size);
     void close_socket();
 
 private:

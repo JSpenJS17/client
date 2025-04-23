@@ -105,11 +105,11 @@ void ClientSocket::send_msg(const char* msg, int msg_size) {
     send(clientSocket, msg, msg_size, 0);
 }
 
-void ClientSocket::receive_msg(char* buffer, int buffer_size) {
+size_t ClientSocket::receive_msg(char* buffer, int buffer_size) {
     // Receive data from server
     memset(buffer, 0, buffer_size);
     // do not block
-    recv(clientSocket, buffer, buffer_size, 0);
+    return recv(clientSocket, buffer, buffer_size, 0);
 }
 
 void ClientSocket::close_socket() {
