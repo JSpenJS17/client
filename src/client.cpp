@@ -2,18 +2,87 @@
 #include "client_socket.hpp"
 #include <thread>
 #include <mutex>
+#include <signal.h>
 
 #define BUFFER_SIZE 1024
+#define MAX_PLAYERS 2
+#define MAX_X 15
+#define MAX_Y 15
+#define MIN_X 0
+#define MIN_Y 0
 
 using namespace std;
-ClientSocket* clientSocket;
+
+class Player {
+    public:
+        Player(int id, int x, int y, Pixel pixel)
+            : id(id), x(x), y(y), pixel(pixel) {}
+        
+        int id;
+        int x;
+        int y;
+        Pixel pixel;
+
+        void move(char direction) {
+            switch (direction) {
+                case 'w':
+                    if (y > MIN_Y) y--;
+                    break;
+                
+                case 'a':
+                    if (x > MIN_X) x--;
+                    break;
+
+                case 's':
+                    if (y < MAX_Y-1) y++;
+                    break;
+
+                case 'd':
+                    if (x < MAX_X-1) x++;
+                    break;
+            }
+        }
+
+};
+
+mutex board_mutex;
 Board* board;
 Pixel bg_pixel(' ', BLACK, BLACK);
+Player players[MAX_PLAYERS] = { 
+                                Player(0, 0, 0, Pixel('@', BLUE, BLUE)), 
+                                Player(1, 0, 0, Pixel('@', RED, RED)) 
+                              };
+
+ClientSocket* clientSocket;
 string starting_string = "Hello from client";
+
+void board_updater(int p_num, char inp) {
+    board_mutex.lock();
+
+    // Place players on the board
+    board->write(players[1].y, players[1].x, bg_pixel);
+    board->write(players[0].y, players[0].x, bg_pixel);
+
+    // Update player position based on input
+    players[p_num].move(inp);
+
+    // Place players on the board
+    board->write(players[1].y, players[1].x, players[1].pixel);
+    board->write(players[0].y, players[0].x, players[0].pixel);
+
+    // Draw the updated board
+    board->draw(0, false);
+    fflush(stdout);
+
+    board_mutex.unlock();
+}
 
 void sigint_handler(int sig)
 {
+    show_cursor(true);
+    color(16, 16);
     delete clientSocket;
+    delete board;
     #if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__))
     reset_termios();
     #endif
@@ -41,9 +110,11 @@ void sender() {
             // Send it!
             clientSocket->send_msg(&key, 1);
             check_error();
+
+            // Update the board
+            board_updater(0, key);
         }
 
-        // look for input every 25 ms (can be changed)
         delay(16);
     }
 }
@@ -61,10 +132,14 @@ void listener() {
         {
             if (wait_time < starting_string.size())
             {
+                // wait through first "Hello from client"
+                    // this prevents the dreaded 35 character crash
                 wait_time++;
                 continue;
             }
-            cout << "Received: " << receive_buffer[i] << endl;
+
+            // Update the board
+            board_updater(1, receive_buffer[i]);
         }
 
         fflush(stdin);
@@ -77,6 +152,7 @@ int main()
     #if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__))
     init_termios();
     #endif
+    signal(SIGINT, sigint_handler);
 
     // creating socket
     cout << "Creating socket..." << endl;
@@ -95,9 +171,15 @@ int main()
     // sending data
     cout << "Connected!" << endl;
 
-    
-    board = new Board(10, 10, bg_pixel);
+    clear_screen();
+    show_cursor(false);
 
+    // Create game board
+    board = new Board(MAX_X, MAX_Y, bg_pixel);
+    board_updater(0, ' '); // Initialize board with players
+    board->draw(0, false);
+    fflush(stdout);
+    
     try {
         // Start sender and listener in separate threads
         thread sender_thread(sender);
@@ -109,12 +191,14 @@ int main()
     } catch (const exception& ex) {
         cerr << "Thread error: " << ex.what() << endl;
         check_error();
+        sigint_handler(0);
         exit(1);
     }
 
     // closing socket
     cout << "Closing socket..." << endl;
     delete clientSocket;
+    delete board;
 
     #if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__))
     reset_termios();
