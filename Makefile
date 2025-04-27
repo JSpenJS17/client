@@ -38,7 +38,7 @@ endif
 
 # Final executable target
 $(TARGET): $(HDR) $(OBJ)
-	$(GXX) $(OBJ) -o $(TARGET)
+	$(GXX) $(OBJ) $(CFLAGS) -o $(TARGET)
 
 # Rule to compile .cpp -> .o (ensures obj/ exists)
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.$(CPP) | $(OBJ_DIR)

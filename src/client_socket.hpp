@@ -13,6 +13,8 @@
 // windows specific includes
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <iostream>
+#include <string>
 #endif
 
 #include <unistd.h>

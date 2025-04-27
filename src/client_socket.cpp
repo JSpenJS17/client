@@ -1,8 +1,6 @@
-#include "ToDoError.cpp"
 #include "client_socket.hpp"
 
 #ifdef _WIN32
-
 // ClientSocket class implementation
 ClientSocket::ClientSocket() {
     // Initialize Winsock
