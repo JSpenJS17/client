@@ -54,13 +54,14 @@ void ClientSocket::send_msg(const char* msg, int msg_size) {
     }
 }
 
-void ClientSocket::receive_msg(char* buffer, int buffer_size) {
+size_t ClientSocket::receive_msg(char* buffer, int buffer_size) {
     // Receive data from server
     memset(buffer, 0, buffer_size);
     int bytesReceived = recv(clientSocket, buffer, buffer_size, 0);
     if (bytesReceived == SOCKET_ERROR) {
         std::cerr << "Receive failed: " << WSAGetLastError() << std::endl;
     }
+    return bytesReceived;
 }
 
 void ClientSocket::close_socket() {
