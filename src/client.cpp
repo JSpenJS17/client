@@ -13,6 +13,8 @@
 
 using namespace std;
 
+Pixel bg_pixel(' ', BLACK, BLACK);
+
 class Player {
     public:
         Player(int id, int x, int y, Pixel pixel)
@@ -45,44 +47,71 @@ class Player {
 
 };
 
-mutex board_mutex;
-Board* board;
-Pixel bg_pixel(' ', BLACK, BLACK);
 Player players[MAX_PLAYERS] = { 
-                                Player(0, 0, 0, Pixel('@', BLUE, BLUE)), 
-                                Player(1, 0, 0, Pixel('@', RED, RED)) 
-                              };
+    Player(0, 0, 0, Pixel('@', BLUE, BLUE)), 
+    Player(1, 0, 0, Pixel('@', RED, RED)) 
+  };
+
+class GameBoard {
+    public:
+        GameBoard(int width, int height) :
+            width(width), height(height) {
+            board = new Board(width, height, bg_pixel);
+        }
+
+        ~GameBoard() {
+            delete board;
+        }
+
+        void board_updater(int p_num, char inp) {
+            board_mutex.lock();
+
+            // Place players on the board
+            board->write(players[1].y, players[1].x, bg_pixel);
+            board->write(players[0].y, players[0].x, bg_pixel);
+
+            // Update player position based on input
+            players[p_num].move(inp);
+
+            // Place players on the board
+            board->write(players[1].y, players[1].x, players[1].pixel);
+            board->write(players[0].y, players[0].x, players[0].pixel);
+
+            // Draw the updated board
+            board->draw(0, false);
+            fflush(stdout);
+
+            board_mutex.unlock();
+        }
+
+        void draw() {
+            board->draw(0, false);
+            fflush(stdout);
+        }
+
+        void write(int row, int col, Pixel pixel) {
+            board->write(row, col, pixel);
+        }
+
+        int width;
+        int height;
+        Board* board;
+    
+    private:
+        mutex board_mutex;
+};
+
+GameBoard* game;
 
 ClientSocket* clientSocket;
 string starting_string = "Hello from client";
-
-void board_updater(int p_num, char inp) {
-    board_mutex.lock();
-
-    // Place players on the board
-    board->write(players[1].y, players[1].x, bg_pixel);
-    board->write(players[0].y, players[0].x, bg_pixel);
-
-    // Update player position based on input
-    players[p_num].move(inp);
-
-    // Place players on the board
-    board->write(players[1].y, players[1].x, players[1].pixel);
-    board->write(players[0].y, players[0].x, players[0].pixel);
-
-    // Draw the updated board
-    board->draw(0, false);
-    fflush(stdout);
-
-    board_mutex.unlock();
-}
 
 void sigint_handler(int sig)
 {
     show_cursor(true);
     color(16, 16);
     delete clientSocket;
-    delete board;
+    delete game;
     #if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__))
     reset_termios();
     #endif
@@ -112,7 +141,7 @@ void sender() {
             check_error();
 
             // Update the board
-            board_updater(0, key);
+            game->board_updater(0, key);
         }
 
         delay(16);
@@ -139,7 +168,7 @@ void listener() {
             }
 
             // Update the board
-            board_updater(1, receive_buffer[i]);
+            game->board_updater(1, receive_buffer[i]);
         }
 
         fflush(stdin);
@@ -175,10 +204,9 @@ int main()
     show_cursor(false);
 
     // Create game board
-    board = new Board(MAX_X, MAX_Y, bg_pixel);
-    board_updater(0, ' '); // Initialize board with players
-    board->draw(0, false);
-    fflush(stdout);
+    game = new GameBoard(MAX_X, MAX_Y);
+    game->board_updater(0, ' '); // Initialize board with players
+    game->draw();
     
     try {
         // Start sender and listener in separate threads
@@ -198,7 +226,7 @@ int main()
     // closing socket
     cout << "Closing socket..." << endl;
     delete clientSocket;
-    delete board;
+    delete game;
 
     #if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__))
     reset_termios();
