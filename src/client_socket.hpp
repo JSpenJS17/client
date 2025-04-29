@@ -21,6 +21,16 @@
 #include <string.h>
 #include <errno.h>
 
+#define CLIENT_DISCONNECT_MSG "Other client disconnected"
+#define SERVER_DISCONNECT_MSG "Server disconnected"
+
+enum homebrew_error {
+    CLIENT_DISC_ERRNO = -1,
+    SERVER_DISC_ERRNO = -2,
+};
+
+const char* get_error_message(int error_code);
+
 // ClientSocket class definition
 class ClientSocket {
 public:

@@ -175,13 +175,14 @@ void listener() {
                 continue;
             }
 
-			if (receive_buffer[i] == -1) {
+			if (receive_buffer[i] < 0) {
 				// other client disconnected
                     // lowkey this should be more robust and actually do stuff
                     // like close the socket
 				reset_screen();
-				cout << "Partner disconnected." << endl;
-				exit(1);
+                cout << "Ack!" << endl;
+                cout << "Error: " << get_error_message(receive_buffer[i]) << endl;
+				exit(receive_buffer[i]);
 			}
             // Update the board
             game->board_updater(1, receive_buffer[i]);

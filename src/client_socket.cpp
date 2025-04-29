@@ -22,7 +22,6 @@ ClientSocket::ClientSocket() {
 ClientSocket::~ClientSocket() {
     // Cleanup resources
     close_socket();
-    WSACleanup(); // Cleanup Winsock
 }
 
 void ClientSocket::connect_to(const char* server_ip, int port) {
@@ -68,6 +67,7 @@ void ClientSocket::close_socket() {
         closesocket(clientSocket);
         clientSocket = (int)INVALID_SOCKET;
     }
+    WSACleanup(); // Cleanup Winsock
 }
 
 
@@ -117,3 +117,15 @@ void ClientSocket::close_socket() {
 }
 
 #endif
+
+const char* get_error_message(int error_code) {
+    // Get error message based on error code
+    switch (error_code) {
+        case CLIENT_DISC_ERRNO:
+            return CLIENT_DISCONNECT_MSG;
+        case SERVER_DISC_ERRNO:
+            return SERVER_DISCONNECT_MSG;
+        default:
+            return "Unknown error";
+    }
+}
