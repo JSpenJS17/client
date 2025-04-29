@@ -106,24 +106,32 @@ GameBoard* game;
 ClientSocket* clientSocket;
 string starting_string = "Hello from client";
 
-void sigint_handler(int sig)
+void reset_screen() 
 {
-    show_cursor(true);
-    color(16, 16);
-    delete clientSocket;
-    delete game;
+	clear_screen();
+	show_cursor(true);
+	color(16, 16);
     #if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__))
     reset_termios();
     #endif
+}
+
+void sigint_handler(int sig)
+{
+	reset_screen();
+    delete clientSocket;
+    delete game;
     exit(0);
 }
 
 void check_error()
 {
     if (errno) {
-        fprintf(stderr, "Error Number: %d\n", errno);
-        fprintf(stderr, "Error: %s\n", strerror(errno));
-        sigint_handler(0);
+        reset_screen();
+        fflush(stdout);
+        printf("Crash!\n");
+        printf("Error Number: %d\n", errno);
+        printf("Error: %s\n", strerror(errno));
         exit(1);
     }
 }
@@ -167,6 +175,12 @@ void listener() {
                 continue;
             }
 
+			if (receive_buffer[i] == -1) {
+				// other client disconnected
+				reset_screen();
+				cout << "Partner disconnected." << endl;
+				exit(1);
+			}
             // Update the board
             game->board_updater(1, receive_buffer[i]);
         }
@@ -217,9 +231,9 @@ int main()
         sender_thread.join();
         listener_thread.join();
     } catch (const exception& ex) {
+        reset_screen();
         cerr << "Thread error: " << ex.what() << endl;
         check_error();
-        sigint_handler(0);
         exit(1);
     }
 
