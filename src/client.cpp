@@ -124,14 +124,14 @@ void sigint_handler(int sig)
     exit(0);
 }
 
-void check_error()
+void check_error(string wherefrom)
 {
     if (errno) {
         reset_screen();
         fflush(stdout);
-        printf("Crash!\n");
-        printf("Error Number: %d\n", errno);
-        printf("Error: %s\n", strerror(errno));
+        cout << "Crash! From " << wherefrom << endl;
+        cout << "Error Number: " << errno << endl;
+        cout << "Error: " << strerror(errno) << endl;
         exit(1);
     }
 }
@@ -146,7 +146,7 @@ void sender() {
         {
             // Send it!
             clientSocket->send_msg(&key, 1);
-            check_error();
+            check_error("sender()");
 
             // Update the board
             game->board_updater(0, key);
@@ -163,7 +163,7 @@ void listener() {
     
     while (true) {
         bytes_received = clientSocket->receive_msg(receive_buffer, sizeof(receive_buffer));
-        check_error();
+        check_error("listener()");
 
         for (size_t i = 0; i < bytes_received; i++)
         {
@@ -177,6 +177,8 @@ void listener() {
 
 			if (receive_buffer[i] == -1) {
 				// other client disconnected
+                    // lowkey this should be more robust and actually do stuff
+                    // like close the socket
 				reset_screen();
 				cout << "Partner disconnected." << endl;
 				exit(1);
@@ -185,8 +187,8 @@ void listener() {
             game->board_updater(1, receive_buffer[i]);
         }
 
-        fflush(stdin);
-        delay(16);
+        // fflush(stdin);
+        // delay(16);
     }
 }
 
@@ -200,7 +202,7 @@ int main()
     // creating socket
     cout << "Creating socket..." << endl;
     clientSocket = new ClientSocket();
-    check_error();
+    check_error("main() -- create socket");
     
     // specifying address
     const char* server_ip = "131.186.7.78";
@@ -209,7 +211,7 @@ int main()
     // sending connection request
     cout << "Connecting to server at " << server_ip << ":" << port << "..." << endl;
     clientSocket->connect_to(server_ip, port);
-    check_error();
+    check_error("main() -- connect to server");
 
     // sending data
     cout << "Connected!" << endl;
@@ -233,7 +235,7 @@ int main()
     } catch (const exception& ex) {
         reset_screen();
         cerr << "Thread error: " << ex.what() << endl;
-        check_error();
+        check_error("main() -- thread error");
         exit(1);
     }
 
