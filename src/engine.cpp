@@ -91,26 +91,83 @@ void color(unsigned const short bgc,
     }
 }
 
-char wait_for_kb_input(){
-    /* waits for user keyboard input and returns the character they input */
-    char key;
-    while (1){
-        if (_kbhit()){
-            key = _getch();
-            break;
-        }
-    }
-    return key;
+static bool engine_initialized = false;
+
+/* Some donothing functions to standardize linux and windows frontend code */
+// DWORD* original_console_mode = nullptr;
+void init_engine() {
+    // HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
+    // GetConsoleMode(hStdin, original_console_mode); // Save current mode
+
+    // DWORD mode = *original_console_mode;
+    // mode &= ~(ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT); // Disable line input and echo
+    // SetConsoleMode(hStdin, mode);
+    engine_initialized = true;
 }
 
-char get_kb_input(){
-    /* doesn't wait for user keyboard press, just asks if there was one and 
-     * returns the key value it was. If there was no input, returns -1
-     */
-    char key = -1;
-    if (_kbhit())
-        key = _getch();
-    return key;
+void close_engine() {
+    if (!engine_initialized)
+    {
+        std::cerr << "Must run init_engine() before close_engine()";
+        exit(1);
+    }
+    // HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
+    // SetConsoleMode(hStdin, *original_console_mode); // Restore saved mode
+}
+
+char wait_for_kb_input() {
+    HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
+    INPUT_RECORD record;
+    DWORD read;
+
+    while (true) {
+        ReadConsoleInput(hStdin, &record, 1, &read);
+        if (record.EventType == KEY_EVENT && record.Event.KeyEvent.bKeyDown) {
+            WORD vkey = record.Event.KeyEvent.wVirtualKeyCode;
+            switch (vkey) {
+                case VK_UP: return 'A';
+                case VK_DOWN: return 'B';
+                case VK_LEFT: return 'C';
+                case VK_RIGHT: return 'D';
+                case VK_ESCAPE: return 27;
+                default: return record.Event.KeyEvent.uChar.AsciiChar;
+            }
+        }
+    }
+}
+
+char get_kb_input() {
+    int ret = -1;
+    HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
+    INPUT_RECORD record;
+    DWORD events;
+    DWORD read;
+    GetNumberOfConsoleInputEvents(hStdin, &events);
+
+    while (events > 0) // anything in console input buffer
+    {
+        // read in the console input
+        ReadConsoleInput(hStdin, &record, 1, &read);
+
+        // if it's a keydown event
+        if (record.EventType == KEY_EVENT && record.Event.KeyEvent.bKeyDown) {
+            WORD vkey = record.Event.KeyEvent.wVirtualKeyCode;
+            switch (vkey) {
+                case VK_UP: return 'A';  // Match Linux-style arrow codes
+                case VK_DOWN: return 'B';
+                case VK_LEFT: return 'D';
+                case VK_RIGHT: return 'C';
+                case VK_ESCAPE: return 27;
+                default: {
+                    char ch = record.Event.KeyEvent.uChar.AsciiChar;
+                    return ch ? ch : -1;
+                }
+            }
+        }
+        GetNumberOfConsoleInputEvents(hStdin, &events);
+    }
+
+    return ret;
 }
 
 void set_cursor_pos(unsigned const int row, unsigned const int col){
@@ -152,17 +209,24 @@ void color(unsigned const short bgc,
 }
 
 static struct termios old, current;
+static bool engine_initialized = false;
 
-void init_termios(){
+void init_engine(){
     tcgetattr(0, &old);
     current = old;
     current.c_lflag &= ~(ICANON | ECHO);
     current.c_cc[VMIN] = 1;
     current.c_cc[VTIME] = 0;
     tcsetattr(0, TCSANOW, &current);
+    engine_initialized = true;
 }
 
-void reset_termios() {
+void close_engine() {
+    if (!engine_initialized)
+    {
+        std::cerr << "Must run init_engine() before close_engine()";
+        exit(1); 
+    }
     tcsetattr(0, TCSANOW, &old);
 }
 
@@ -181,13 +245,13 @@ char wait_for_kb_input() {
      */
     char c;
     // blocking read
-    read(0, &c, 1);
+    size_t dummy = read(0, &c, 1);
     if (kbhit() && c == 27) // more in stdin and potential esc sequence
     {
-        read(0, &c, 1);
+        dummy = read(0, &c, 1);
         if (c == '[')
         {
-            read(0, &c, 1);
+            dummy = read(0, &c, 1);
             return c;
         }
         return '?'; // unknown esc sequence
@@ -205,13 +269,13 @@ char get_kb_input(){
     if (kbhit())
     {
         // blocking read
-        read(0, &c, 1);
+        size_t dummy = read(0, &c, 1);
         if (kbhit() && c == 27) // more in stdin and potential esc sequence
         {
-            read(0, &c, 1);
+            dummy = read(0, &c, 1);
             if (c == '[')
             {
-                read(0, &c, 1);
+                dummy = read(0, &c, 1);
                 return c;
             }
             return '?'; // unknown esc sequence
