@@ -111,9 +111,7 @@ void reset_screen()
 	clear_screen();
 	show_cursor(true);
 	color(16, 16);
-    #if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__))
-    reset_termios();
-    #endif
+    close_engine();
 }
 
 void sigint_handler(int sig)
@@ -195,9 +193,7 @@ void listener() {
 
 int main()
 {
-    #if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__))
-    init_termios();
-    #endif
+    init_engine();
     signal(SIGINT, sigint_handler);
 
     // creating socket
@@ -245,9 +241,7 @@ int main()
     delete clientSocket;
     delete game;
 
-    #if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__))
-    reset_termios();
-    #endif
+    close_engine();
 
     return 0;
 }

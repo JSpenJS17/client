@@ -211,6 +211,10 @@ void color(unsigned const short bgc,
 static struct termios old, current;
 static bool engine_initialized = false;
 
+/*
+ * init_engine():
+ *  Must be run before anything else, inits non-bloking terminal node
+ */
 void init_engine(){
     tcgetattr(0, &old);
     current = old;
@@ -243,16 +247,24 @@ char wait_for_kb_input() {
      * Waits for user keyboard input and returns the character they input 
      * returns 27 on ESC press, A/B/C/D on UP/DOWN/LEFT/RIGHT respectively
      */
-    char c;
+    char c = '?';
+    
     // blocking read
-    size_t dummy = read(0, &c, 1);
-    if (kbhit() && c == 27) // more in stdin and potential esc sequence
+    size_t bytes_read = read(0, &c, 1);
+    if (kbhit() && c == 27 && bytes_read) // more in stdin and potential esc sequence
     {
-        dummy = read(0, &c, 1);
-        if (c == '[')
+        bytes_read = read(0, &c, 1);
+        if (bytes_read && c == '[')
         {
-            dummy = read(0, &c, 1);
-            return c;
+            bytes_read = read(0, &c, 1);
+            if (bytes_read)
+            {
+                return c;
+            }
+            else
+            {
+                return '?';
+            }
         }
         return '?'; // unknown esc sequence
     }
@@ -265,18 +277,25 @@ char get_kb_input(){
      * returns the key value it was. If there was no input, returns -1
      * returns 27 on ESC press, A/B/C/D on UP/DOWN/LEFT/RIGHT respectively
      */
-    char c;
+    char c = '?';
     if (kbhit())
     {
         // blocking read
-        size_t dummy = read(0, &c, 1);
-        if (kbhit() && c == 27) // more in stdin and potential esc sequence
+        size_t bytes_read = read(0, &c, 1);
+        if (bytes_read && kbhit() && c == 27) // more in stdin and potential esc sequence
         {
-            dummy = read(0, &c, 1);
-            if (c == '[')
+            bytes_read = read(0, &c, 1);
+            if (bytes_read && c == '[')
             {
-                dummy = read(0, &c, 1);
-                return c;
+                bytes_read = read(0, &c, 1);
+                if (bytes_read)
+                {
+                    return c;
+                }
+                else
+                {
+                    return '?';
+                }
             }
             return '?'; // unknown esc sequence
         }
