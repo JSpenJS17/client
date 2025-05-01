@@ -1,4 +1,3 @@
-
 #include "game.hpp"
 
 GameBoard::GameBoard(int width, int height): width(width), height(height) {

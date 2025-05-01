@@ -1,4 +1,6 @@
-#include "client_socket.hpp"
+#include "lib/client_socket.hpp"
+#include "game.hpp"
+
 #ifndef CLIENT_HPP
 #define CLIENT_HPP
 

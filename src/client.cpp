@@ -1,4 +1,3 @@
-#include "game.hpp"
 #include "client.hpp"
 
 string starting_string = "Hello from client";
